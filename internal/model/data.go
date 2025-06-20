@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/exp/maps"
 )
 
 type Data struct {
@@ -29,9 +30,11 @@ type Data struct {
 	Text string
 }
 
-func NewData() Data {
+func NewData(id string) Data {
+	//if err := ValidateDateID(); err != nil { ... }
+
 	return Data{
-		ID:        uuid.NewString(),
+		ID:        id,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Time{},
 		Chain:     nil,
@@ -45,8 +48,22 @@ var (
 )
 
 type DataStorage interface {
-	Random() (Data, error)
-	Get(id string) (Data, error)
-	Upsert(datas ...Data) error
-	InTransaction(fn func(DataStorage) error) error
+	Find(id string) (Data, error)
+	Upsert(Data) error
+}
+
+func ProcessData(d Data, threadID string) Data {
+	start := time.Now()
+	newLatencies := make(map[string]time.Duration, len(d.Latencies))
+	maps.Copy(newLatencies, d.Latencies)
+	newData := Data{
+		ID:        d.ID,
+		CreatedAt: d.CreatedAt,
+		UpdatedAt: time.Now(),
+		Chain:     append(d.Chain, threadID),
+		Latencies: newLatencies,
+		Text:      uuid.NewString(),
+	}
+	newData.Latencies[threadID] += time.Since(start)
+	return newData
 }
