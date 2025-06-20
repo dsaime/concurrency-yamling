@@ -21,3 +21,6 @@ check: vet lint
 
 run:
 	go run ./cmd/concurrency-yamling/main.go
+
+build:
+	CGO_ENABLED=0 GOOS=linux go build -o bin/concurrency-yamling cmd/concurrency-yamling/main.go
