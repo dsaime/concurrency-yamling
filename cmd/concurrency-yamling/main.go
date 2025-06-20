@@ -54,34 +54,28 @@ func initCliCommand() *cli.Command {
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "pgsql-dsn",
-				Destination: &cfg.Pgsql.DSN,
-				Usage:       "PostgreSQL connection string in format 'postgres://user:password@host:port/dbname'",
-				Required:    true,
+				Name:        "storage-dir",
+				Destination: &cfg.FsStorage.Dir,
+				Usage:       "Директория, в которой будут храниться yaml-файлы обрабатываемых данных",
+				Value:       "./storage/",
 			},
-			&cli.StringFlag{
-				Name:        "redis-url",
-				Destination: &cfg.Redis.RedisURL,
-				Usage:       "Redis connection string in format 'redis://[[username][:password]@]host[:port][/db-number]'",
-				Required:    true,
+			&cli.UintFlag{
+				Name:        "max-iterations",
+				Destination: &cfg.MaxIterations,
+				Usage:       "Сколько итераций требуется для завершения обработки данных",
+				Value:       100,
 			},
-			&cli.StringFlag{
-				Name:        "http-addr",
-				Destination: &cfg.HttpAddr,
-				Usage:       "HTTP server address",
-				Required:    true,
+			&cli.UintFlag{
+				Name:        "threads-count",
+				Destination: &cfg.ThreadsCount,
+				Usage:       "Количество потоков",
+				Value:       20,
 			},
-			&cli.StringFlag{
-				Name:        "nats-url",
-				Destination: &cfg.Nats.NatsURL,
-				Usage:       "NATS connection string in format 'nats://user:password@host:port'",
-				Required:    true,
-			},
-			&cli.DurationFlag{
-				Name:        "cache-expiration",
-				Destination: &cfg.Redis.Expiration,
-				Usage:       "Cache expiration time",
-				Value:       time.Minute * 5,
+			&cli.UintFlag{
+				Name:        "datas-count",
+				Destination: &cfg.DatasCount,
+				Usage:       "Количество данных к обработке",
+				Value:       10,
 			},
 		},
 	}

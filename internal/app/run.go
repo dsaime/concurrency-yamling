@@ -48,12 +48,13 @@ func Run(ctx context.Context, cfg Config) error {
 		threadIDs[i] = "th_" + strconv.Itoa(i)
 	}
 
-	// Ожидание обработки всех данных
+	// Ожидание окончания работы всех потоков
 	var wg sync.WaitGroup
-	wg.Add(len(dataIDsForProcessing))
+	wg.Add(len(threadIDs))
 
 	for _, threadID := range threadIDs {
 		go func() {
+			defer wg.Done()
 			for {
 				// Проверить жизнь контекста
 				select {
@@ -70,6 +71,7 @@ func Run(ctx context.Context, cfg Config) error {
 				if len(dataIDsForProcessing) == 0 {
 					slog.Info("no data for processing",
 						"threadID", threadID)
+					mu.Unlock()
 					return
 				}
 				// Взять случайный ID из доступных к обработке данных
@@ -77,8 +79,6 @@ func Run(ctx context.Context, cfg Config) error {
 				// Если данные обработались нужное количество раз, удалить из доступных и оповестить wg
 				if dataIDToIteration[dataIDForProcessing] >= cfg.MaxIterations {
 					delete(dataIDsForProcessing, dataIDForProcessing)
-					// Оповестить wg об окончании обработки данных
-					wg.Done()
 					// Освободить доступ к переменным
 					mu.Unlock()
 					slog.Info("data is end of processing",
@@ -88,13 +88,14 @@ func Run(ctx context.Context, cfg Config) error {
 				}
 				// Освободить доступ к переменным
 				mu.Unlock()
-				// Получить эксклюзивный доступ к данным по ID
-				dataMu := dataToMutex[dataIDForProcessing]
-				dataMu.Lock()
 
 				slog.Info("thread start processing",
 					"threadID", threadID,
 					"dataID", dataIDForProcessing)
+
+				// Получить эксклюзивный доступ к данным по ID
+				dataMu := dataToMutex[dataIDForProcessing]
+				dataMu.Lock()
 
 				// Запустить обработку задачи
 				if err := runDataProcessing(threadID, dataIDForProcessing, storage); err != nil {
@@ -108,7 +109,6 @@ func Run(ctx context.Context, cfg Config) error {
 					slog.Info("data processing finished",
 						"threadID", threadID,
 						"dataID", dataIDForProcessing)
-
 				}
 				// Освободить доступ к данным
 				dataMu.Unlock()
@@ -117,7 +117,7 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 
 	wg.Wait()
-	slog.Info("all data processed")
+	return ctx.Err()
 }
 
 // runDataProcessing получает данные по ID из хранилища, обрабатывает и сохраняет обратно
